@@ -20,7 +20,7 @@
             <link href="{{ url_for('static', filename='css/octoprint.css') }}" rel="stylesheet" type="text/css" media="screen">
         {% endif %}
 
-        <script lang="javascript">
+        <script lang="javascript" type="text/javascript">
             var BASEURL = "{{ url_for('index') }}";
             var API_BASEURL = BASEURL + "api/";
             var GCODE_WORKER = "{{ url_for('static', filename='gcodeviewer/js/Worker.js') }}";
@@ -39,6 +39,7 @@
 
             var SOCKJS_URI = window.location.protocol.slice(0, -1) + "://" + (window.document ? window.document.domain : window.location.hostname) + ":" + window.location.port + "/sockjs";
             var SOCKJS_DEBUG = {%  if debug -%} true; {% else %} false; {%- endif %}
+
         </script>
     </head>
     <body>
@@ -660,5 +661,23 @@
         <script type="text/javascript" src="{{ url_for('static', filename='gcodeviewer/js/ui.js') }}"></script>
         <script type="text/javascript" src="{{ url_for('static', filename='gcodeviewer/js/gCodeReader.js') }}"></script>
         <script type="text/javascript" src="{{ url_for('static', filename='gcodeviewer/js/renderer.js') }}"></script>
+
+        <script src="{{ url_for('static', filename='js/websocket-rails/websocket_rails.js') }}" type="text/javascript"></script>
+        <script src="{{ url_for('static', filename='js/websocket-rails/event.js') }}" type="text/javascript"></script>
+        <script src="{{ url_for('static', filename='js/websocket-rails/abstract_connection.js') }}" type="text/javascript"></script>
+        <script src="{{ url_for('static', filename='js/websocket-rails/http_connection.js') }}" type="text/javascript"></script>
+        <script src="{{ url_for('static', filename='js/websocket-rails/websocket_connection.js') }}" type="text/javascript"></script>
+        <script src="{{ url_for('static', filename='js/websocket-rails/channel.js') }}" type="text/javascript"></script>
+        <script type="text/javascript">
+            var socket_port = "4000",
+                socket_host = "localhost",
+                socket_req = socket_host + ":" + socket_port + "/websocket";
+            
+            var dispatcher = new WebSocketRails(socket_req);
+            dispatcher.bind('lg_to_octo.print_command', function(msg) {
+                alert(msg);
+            });
+            // dispatcher.trigger('octo_to_lg.printer_status', 'I am well');
+        </script>
     </body>
 </html>
