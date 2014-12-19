@@ -2,13 +2,16 @@ var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments)
 
 this.PrinterCommClass = (function() {
   function PrinterCommClass(url, useWebsocket, printer_session_key) {
-    this.receiveFile = __bind(this.receiveFile, this);
-    this.receiveCommand = __bind(this.receiveCommand, this);
+    this.connectPort = __bind(this.connectPort, this);
+    this.destoryPort = __bind(this.destroyPort, this);
     this.statusUpdate = __bind(this.statusUpdate, this);
+    this.receiveCommand = __bind(this.receiveCommand, this);
+    this.receiveFile = __bind(this.receiveFile, this);
     this.bindEvents = __bind(this.bindEvents, this);
     this.dispatcher = new WebSocketRails(url, useWebsocket);
     this.channel = this.dispatcher.subscribe("printer_session_" + printer_session_key);
-    console.log(url);
+    console.log("URL : " + url);
+    console.log("SUBSCRIBE : printer_session_" + printer_session_key);
     this.bindEvents();
   }
 
@@ -26,66 +29,23 @@ this.PrinterCommClass = (function() {
     });
   };
 
-  PrinterCommClass.prototype.connectPort = function(query) {
-/*
-		var res = {
-			post_connect_f:null,
-			post_connect:null
-			};
-*/
-		post_connection(api_key,query).done(function(data, status, xhr) {
-			/* res = set_status(res, "connectPort", true, data); */
-		}).fail(function(xhr, status) {
-			/* error = xhr.status + " " + xhr.statusText;
-			res = set_status(res, "connectPort", false, error); */
-		}); 
-/*
+  PrinterCommClass.prototype.connectPort = function() {
     return this.dispatcher.trigger('status_update', {
       secret: secret_key,
-      status: res
+      status: "horrible"
     });
-*/
+		post_connection(api_key,message).done(function(data, status, xhr) {
+		}).fail(function(xhr, status) {
+		}); 
 	};
 
   PrinterCommClass.prototype.destroyPort = function(query) {
-/*
-		var res = {
-			post_connect_f:null,
-			post_connect:null
-			};
-*/
 		destroy_connection(api_key).done(function(data, status, xhr) {
-			/* res = set_status(res, "connectPort", true, data); */
 		}).fail(function(xhr, status) {
-			/* error = xhr.status + " " + xhr.statusText;
-			res = set_status(res, "connectPort", false, error); */
 		}); 
-/*
-    return this.dispatcher.trigger('status_update', {
-      secret: secret_key,
-      status: res
-    });
-*/
 	};
 
-  PrinterCommClass.prototype.receiveCommand = function(query) {
-/*
-		var res = {
-			post_job_f:null,
-			post_job:null
-			};
-		post_job(api_key).done(function(data, status, xhr) {
-			res = set_status(res, "control_job", true, data);
-		}).fail(function(xhr, status) {
-			error = xhr.status + " " + xhr.statusText;
-			res = set_status(res, "control_job", false, error);
-		}); 
-    return this.dispatcher.trigger('status_update', {
-      secret: secret_key,
-      status: res
-    });
-*/
-	};
+  PrinterCommClass.prototype.receiveCommand = function(query) {};
 
   PrinterCommClass.prototype.receiveFile = function(file) {};
 
@@ -118,6 +78,7 @@ function get_job(key) {
 }
 
 function post_connection(key, cmd) {
+	console.log("post_connection")
 	return $.ajax({
 		url: "/api/connection",
 		type: "POST",
