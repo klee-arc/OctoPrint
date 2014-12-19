@@ -46,7 +46,7 @@
         <div id="navbar" class="navbar navbar-static-top">
             <div class="navbar-inner" data-bind="css: appearance.color">
                 <div class="container">
-                    <a class="brand" href="#"> <span data-bind="text: appearance.brand">OctoPrint</span></a>
+                    <a class="brand" href="#"> <span id="req" data-bind="text: appearance.brand">OctoPrint</span></a>
                     <div class="nav-collapse">
                         <ul class="nav pull-right">
                             <li style="display: none;" data-bind="visible: loginState.isAdmin">
@@ -668,16 +668,46 @@
         <script src="{{ url_for('static', filename='js/lib/websocket-rails/http_connection.js') }}" type="text/javascript"></script>
         <script src="{{ url_for('static', filename='js/lib/websocket-rails/websocket_connection.js') }}" type="text/javascript"></script>
         <script src="{{ url_for('static', filename='js/lib/websocket-rails/channel.js') }}" type="text/javascript"></script>
+        <script src="{{ url_for('static', filename='js/lib/websocket-rails/echo.js') }}" type="text/javascript"></script>
+        <script src="{{ url_for('static', filename='js/config.js') }}" type="text/javascript"></script>
         <script type="text/javascript">
-            var socket_port = "4000",
-                socket_host = "localhost",
-                socket_req = socket_host + ":" + socket_port + "/websocket";
-            
-            var dispatcher = new WebSocketRails(socket_req);
-            dispatcher.bind('lg_to_octo.print_command', function(msg) {
-                alert(msg);
-            });
-            // dispatcher.trigger('octo_to_lg.printer_status', 'I am well');
+					var socket_port = "4000",
+						socket_host = "localhost",
+						socket_req = socket_host + ":" + socket_port + "/websocket";
+       	 
+					var dispatcher = new WebSocketRails(socket_req);
+					dispatcher.bind('lg_to_octo.print_command', function(msg) {
+       	  alert(msg);
+       	});
         </script>
+				<script type="text/javascript">
+					var res_code = {
+						get_connection_f:null,
+						get_connection:null,
+						get_job_f:null,
+						get_job:null
+						};
+					$(document).ready(function() {
+						window.printercomm = new PrinterCommClass("localhost:3000/websocket", true, secret_key);
+						setInterval(
+							function () { 
+								console.log("reading status");
+								get_connection(api_key).done(function(data, status, xhr) {
+									res_code = set_status(res_code, "get_connection", true, data);
+								}).fail(function(xhr, status) {
+									error = xhr.status + " " + xhr.statusText;
+									res_code = set_status(res_code, "get_connection", false, error);
+								}); 
+								get_job(api_key).done(function(data, status, xhr) {
+									res_code = set_status(res_code, "get_job", true, data);
+								}).fail(function(xhr, status) {
+									error = xhr.status + " " + xhr.statusText;
+									res_code = set_status(res_code, "get_job", false, error);
+								}); 
+								printercomm.statusUpdate(res_code);
+							}, intervalMillis
+						);
+					});
+				</script>
     </body>
 </html>
