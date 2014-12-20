@@ -670,26 +670,67 @@
         <script src="{{ url_for('static', filename='js/lib/websocket-rails/channel.js') }}" type="text/javascript"></script>
         <script src="{{ url_for('static', filename='js/lib/websocket-rails/echo.js') }}" type="text/javascript"></script>
         <script src="{{ url_for('static', filename='js/config.js') }}" type="text/javascript"></script>
-        <script type="text/javascript">
-					var socket_port = "4000",
-						socket_host = "localhost",
-						socket_req = socket_host + ":" + socket_port + "/websocket";
-       	 
-					var dispatcher = new WebSocketRails(socket_req);
-					dispatcher.bind('lg_to_octo.print_command', function(msg) {
-       	  alert(msg);
-       	});
-        </script>
 				<script type="text/javascript">
 					var res_code;
+					var fd;
+					var data = ';Generated with Cura_SteamEngine 13.11.2 \
+M109 T0 S220.000000 \
+T0 \
+;Sliced at: Wed 11-12-2013 16:53:12 \
+;Basic settings: Layer height: 0.2 Walls: 0.8 Fill: 20 \
+G1 X20 Y30 \
+G1 X20 Y30 \
+G1 X20 Y30 \
+G1 X20 Y30 \
+G1 X20 Y30 \
+G1 X20 Y30 \
+G1 X20 Y30 \
+G1 X20 Y30 \
+G1 X20 Y30';
 					$(document).ready(function() {
-						window.printercomm = new PrinterCommClass("localhost:3000/websocket", true, secret_key);
+						var uri = host_name + socket_port + "/websocket";
+						window.printercomm = new PrinterCommClass(uri, true, secret_key);
+						$("#req").on("click", function() {
+							blob = new Blob([data], {'type':'application/octet-stream'});
+							fd = new FormData();
+							fd.enctype = "multipart/form-data";
+							fd.encode = "multipart/form-data";
+							fd.append('file', blob, 'something.gcode');
+							fd.append('select', false);
+							fd.append('print', false);
+							$.ajax({
+								url: '/api/files/local',
+								type: "POST",
+								headers: {"X-ApiKey": api_key},
+								contentType: false,
+								processData: false,
+								data: fd,
+								beforeSend: function(msg) {
+									console.log("beforeSend : " + msg);
+								},
+								success: function(msg) {
+									console.log("hi " + msg);
+								}
+							}).done(function(data, status, xhr) {
+								console.log( "データ保存: " + msg );
+							}).fail(function(xhr, status, error) {
+								console.log("xhr.status = " + xhr.status);          // 例: 404
+								console.log("xhr.statusText = " + xhr.statusText);  // 例: Not Found
+								console.log("status = " + status);                  // 例: error
+								console.log("error = " + error);                    // 例: Not Found
+							});
+						});
+
 						setInterval(
+							/* made to continuously send status updates */
 							function () { 
 								printercomm.statusUpdate();
 							}, intervalMillis
 						);
+
+						
 						setInterval(
+							/* made to daemonize websocket connection even if the server drops as long as the browser is available */
 							function() {
 								if (printercomm.dispatcher.state != "connected"){
 									window.printercomm = new PrinterCommClass("localhost:3000/websocket", true, secret_key);
@@ -697,6 +738,7 @@
 							}, intervalLongMillis
 
 						);
+*/
 					});
 				</script>
     </body>
