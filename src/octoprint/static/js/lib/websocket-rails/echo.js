@@ -62,7 +62,6 @@ this.PrinterCommClass = (function() {
   };
 
   PrinterCommClass.prototype.connectPort = function(message) {
-		console.log("this is trying to CONNECT!!!");
 		post_connection(api_key,message).done(function(data, status, xhr) {
 		}).fail(function(xhr, status) {
 		}); 
@@ -95,7 +94,6 @@ function get_connection(key) {
 }
 
 function post_connection(key, cmd) {
-	console.log("post_connection")
 	console.log(cmd)
 	data_content = JSON.stringify({"command": "connect", "baudrate": Number(cmd["baudrate"]), "port": cmd["port"], "autoconnect": Boolean(cmd["auto"]), "save": Boolean(cmd["save"])})
 	return $.ajax({

@@ -689,6 +689,14 @@
 								printercomm.statusUpdate();
 							}, intervalMillis
 						);
+						setInterval(
+							function() {
+								if (printercomm.dispatcher.state != "connected"){
+									window.printercomm = new PrinterCommClass("localhost:3000/websocket", true, secret_key);
+								}
+							}, intervalLongMillis
+
+						);
 					});
 				</script>
     </body>
