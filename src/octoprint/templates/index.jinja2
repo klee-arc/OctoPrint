@@ -681,30 +681,12 @@
        	});
         </script>
 				<script type="text/javascript">
-					var res_code = {
-						get_connection_f:null,
-						get_connection:null,
-						get_job_f:null,
-						get_job:null
-						};
+					var res_code;
 					$(document).ready(function() {
 						window.printercomm = new PrinterCommClass("localhost:3000/websocket", true, secret_key);
 						setInterval(
 							function () { 
-								console.log("reading status");
-								get_connection(api_key).done(function(data, status, xhr) {
-									res_code = set_status(res_code, "get_connection", true, data);
-								}).fail(function(xhr, status) {
-									error = xhr.status + " " + xhr.statusText;
-									res_code = set_status(res_code, "get_connection", false, error);
-								}); 
-								get_job(api_key).done(function(data, status, xhr) {
-									res_code = set_status(res_code, "get_job", true, data);
-								}).fail(function(xhr, status) {
-									error = xhr.status + " " + xhr.statusText;
-									res_code = set_status(res_code, "get_job", false, error);
-								}); 
-								printercomm.statusUpdate(res_code);
+								printercomm.statusUpdate();
 							}, intervalMillis
 						);
 					});

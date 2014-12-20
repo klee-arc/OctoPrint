@@ -5,6 +5,7 @@ this.PrinterCommClass = (function() {
     this.connectPort = __bind(this.connectPort, this);
     this.destoryPort = __bind(this.destroyPort, this);
     this.statusUpdate = __bind(this.statusUpdate, this);
+    this.sendStatus = __bind(this.sendStatus, this);
     this.receiveCommand = __bind(this.receiveCommand, this);
     this.receiveFile = __bind(this.receiveFile, this);
     this.bindEvents = __bind(this.bindEvents, this);
@@ -18,22 +19,58 @@ this.PrinterCommClass = (function() {
   PrinterCommClass.prototype.bindEvents = function() {
     this.channel.bind('open_connection', this.connectPort);
     this.channel.bind('close_connection', this.destroyPort);
+    this.channel.bind('request_status', this.statusUpdate);
     this.channel.bind('user_command', this.receiveCommand);
     return this.channel.bind('user_file', this.receiveFile);
   };
 
-  PrinterCommClass.prototype.statusUpdate = function(current_status) {
-    return this.dispatcher.trigger('status_update', {
-      secret: secret_key,
-      status: current_status
-    });
+
+	PrinterCommClass.prototype.sendStatus = function(current_status) {
+		console.log("sendStatus called");
+		console.log(current_status);
+		return this.dispatcher.trigger("new_status", {
+			secret: secret_key,
+			status: current_status
+		});
+		/*
+		this.dispatcher.trigger('new_status', {
+		});
+		*/
+	}; 
+
+  PrinterCommClass.prototype.statusUpdate = function() {
+		console.log("reading status");
+		var res_code = {
+			get_connection_f:null,
+			get_connection:null,
+			get_job_f:null,
+			get_job:null
+			};
+		var self = this;
+
+		$.when(
+			get_connection(api_key),
+			get_job(api_key)
+		).then(
+			function(data0, data1){
+				res_code = set_status(res_code, "get_connection", true, data0[0]);
+				res_code = set_status(res_code, "get_job", true, data1[0]);
+				return res_code;
+			},
+			function(data0, data1){
+				res_code = set_status(res_code, "get_connection", false, data0[0]);
+				res_code = set_status(res_code, "get_job", false, data1[0]);
+				return res_code;
+			}
+		).then(
+			function(callback) {
+				console.log(callback);
+				self.sendStatus(callback);
+			} 
+		);
   };
 
   PrinterCommClass.prototype.connectPort = function() {
-    return this.dispatcher.trigger('status_update', {
-      secret: secret_key,
-      status: "horrible"
-    });
 		post_connection(api_key,message).done(function(data, status, xhr) {
 		}).fail(function(xhr, status) {
 		}); 
