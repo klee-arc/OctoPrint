@@ -24,22 +24,14 @@ this.PrinterCommClass = (function() {
     return this.channel.bind('user_file', this.receiveFile);
   };
 
-
 	PrinterCommClass.prototype.sendStatus = function(current_status) {
-		console.log("sendStatus called");
-		console.log(current_status);
 		return this.dispatcher.trigger("new_status", {
 			secret: secret_key,
 			status: current_status
 		});
-		/*
-		this.dispatcher.trigger('new_status', {
-		});
-		*/
 	}; 
 
   PrinterCommClass.prototype.statusUpdate = function() {
-		console.log("reading status");
 		var res_code = {
 			get_connection_f:null,
 			get_connection:null,
@@ -64,19 +56,19 @@ this.PrinterCommClass = (function() {
 			}
 		).then(
 			function(callback) {
-				console.log(callback);
 				self.sendStatus(callback);
 			} 
 		);
   };
 
-  PrinterCommClass.prototype.connectPort = function() {
+  PrinterCommClass.prototype.connectPort = function(message) {
+		console.log("this is trying to CONNECT!!!");
 		post_connection(api_key,message).done(function(data, status, xhr) {
 		}).fail(function(xhr, status) {
 		}); 
 	};
 
-  PrinterCommClass.prototype.destroyPort = function(query) {
+  PrinterCommClass.prototype.destroyPort = function(message) {
 		destroy_connection(api_key).done(function(data, status, xhr) {
 		}).fail(function(xhr, status) {
 		}); 
@@ -102,26 +94,17 @@ function get_connection(key) {
 	});
 }
 
-function get_job(key) {
-	return $.ajax({
-		url: "/api/job",
-		type: "GET",
-		dataType: "JSON",
-		headers: {"X-ApiKey": key},
-		beforeSend: function() {
-			console.log("get_job executed");
-		}
-	});
-}
-
 function post_connection(key, cmd) {
 	console.log("post_connection")
+	console.log(cmd)
+	data_content = JSON.stringify({"command": "connect", "baudrate": Number(cmd["baudrate"]), "port": cmd["port"], "autoconnect": Boolean(cmd["auto"]), "save": Boolean(cmd["save"])})
 	return $.ajax({
 		url: "/api/connection",
 		type: "POST",
+		contentType: "application/json",
 		dataType: "JSON",
+		data: data_content,
 		headers: {"X-ApiKey": key},
-		data: {"command": "connect", "baudrate": cmd["baudrate"], "port": cmd["port"]},
 		beforeSend: function() {
 			console.log("connecting to printer");
 		}
@@ -141,6 +124,18 @@ function destroy_connection(key) {
 		}
 	});
 	
+}
+
+function get_job(key) {
+	return $.ajax({
+		url: "/api/job",
+		type: "GET",
+		dataType: "JSON",
+		headers: {"X-ApiKey": key},
+		beforeSend: function() {
+			console.log("get_job executed");
+		}
+	});
 }
 
 function post_job(key, cmd) {
