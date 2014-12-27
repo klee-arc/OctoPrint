@@ -5,73 +5,135 @@
   this.PrinterCommClass = (function() {
 
     function PrinterCommClass(url, useWebsocket, printer_session_key) {
-      this.receiveFile = __bind(this.receiveFile, this);
+      this.sendCommandResponse = __bind(this.sendCommandResponse, this);
 
-      this.receiveCommand = __bind(this.receiveCommand, this);
+      this.sendStatusUpdate = __bind(this.sendStatusUpdate, this);
 
-      this.destroyPort = __bind(this.destroyPort, this);
+      this.userCommandReceive = __bind(this.userCommandReceive, this);
 
-      this.connectPort = __bind(this.connectPort, this);
+      this.statusReceive = __bind(this.statusReceive, this);
 
       this.statusUpdate = __bind(this.statusUpdate, this);
+
+      this.receiveFile = __bind(this.receiveFile, this);
 
       this.bindEvents = __bind(this.bindEvents, this);
       this.dispatcher = new WebSocketRails(url, useWebsocket);
       this.channel = this.dispatcher.subscribe("printer_session_" + printer_session_key);
+      this.bindEvents();
     }
 
-    PrinterCommClass.bindEvents();
-
     PrinterCommClass.prototype.bindEvents = function() {
-      var _this = this;
-      this.channel.bind('open_connection', this.connectPort);
-      this.channel.bind('close_connection', this.destroyPort);
       this.channel.bind('request_status', this.statusUpdate);
-      this.channel.bind('user_command', this.receiveCommand);
-      this.channel.bind('user_file', this.receiveFile);
-      return {
-        sendStatus: function(current_status) {
-          return _this.dispatcher.trigger("new_status", {
-            secret: secret_key,
-            status: current_status
-          });
-        }
-      };
+      this.channel.bind('user_command_receive', this.userCommandReceive);
+      return this.channel.bind('user_file', this.receiveFile);
     };
 
-    PrinterCommClass.prototype.statusUpdate = function(event) {
-      var res_code, self;
-      res_code = {
-        get_connection_f: null,
-        get_connection: null,
-        get_job_f: null,
-        get_job: null
-      };
-      self = this;
-      $.when(get_connection(api_key), get_job(api_key)).then(function(data0, data1) {
-        res_code = set_status(res_code, "get_connection", true, data0[0]);
-        res_code = set_status(res_code, "get_job", true, data1[0]);
-        return res_code;
-      }, function(data0, data1) {
-        res_code = set_status(res_code, "get_connection", false, data0[0]);
-        res_code = set_status(res_code, "get_job", false, data1[0]);
-        return res_code;
-      }).then(function(callback) {
-        self.sendStatus(callback);
+    PrinterCommClass.prototype.receiveFile = function(file) {
+      var boundary_key, content, data, filename, header;
+      boundary_key = randomString(16);
+      console.log(file);
+      filename = file["filename"];
+      content = file["content"];
+      header = 'multipart/form-data; boundary=----WebKitFormBoundary' + boundary_key;
+      data = '------WebKitFormBoundary' + boundary_key + ' \n';
+      data += 'Content-Disposition: form-data; name="file"; filename="' + filename + '" \n';
+      data += 'Content-Type: application/octet-stream \n';
+      data += content + ' \n';
+      data += '\n------WebKitFormBoundary' + boundary_key + ' \n';
+      data += 'Content-Disposition: form-data; name="select" \ntrue \n';
+      data += '\n------WebKitFormBoundary' + boundary_key + ' \n';
+      data += 'Content-Disposition: form-data; name="print" \n';
+      data += 'true \n';
+      data += '\n------WebKitFormBoundary' + boundary_key + '--';
+      console.log(data);
+      return $.ajax({
+        url: "/api/files/local",
+        type: "POST",
+        headers: {
+          "X-ApiKey": secret_key
+        },
+        processData: false,
+        contentType: header,
+        data: data
       });
     };
 
-    PrinterCommClass.prototype.connectPort = function(message) {
-      post_connection(api_key, message).done(function(data, status, xhr) {}).fail(function(xhr, status) {});
+    PrinterCommClass.prototype.statusUpdate = function(message) {
+      var res_code, self;
+      res_code = void 0;
+      self = this;
+      return $.when(this.statusReceive("/api/connection"), this.statusReceive("/api/job"), this.statusReceive("/api/files")).then(function(connection, job, files) {
+        res_code = {
+          "connection": connection[0],
+          "job": job[0],
+          "files": files[0]
+        };
+        self.sendStatusUpdate(res_code);
+      }, function(connection, job) {
+        res_code = {
+          "connection": connection[0],
+          "job": job[0],
+          "files": files[0]
+        };
+        self.sendStatusUpdate(res_code);
+      });
     };
 
-    PrinterCommClass.prototype.destroyPort = function(message) {
-      return console.log("DESTROY!!!!");
+    PrinterCommClass.prototype.statusReceive = function(url) {
+      return $.ajax({
+        url: url,
+        type: "GET",
+        dataType: "JSON",
+        headers: {
+          "X-ApiKey": secret_key
+        }
+      });
     };
 
-    PrinterCommClass.prototype.receiveCommand = function(query) {};
+    PrinterCommClass.prototype.userCommandReceive = function(message) {
+      var res_code, self;
+      console.log(message);
+      res_code = void 0;
+      self = this;
+      return $.when($.ajax({
+        url: message["url"],
+        type: message["type"],
+        contentType: "application/json",
+        headers: {
+          "X-ApiKey": secret_key
+        },
+        data: message["params"]
+      })).then(function(response) {
+        res_code = {
+          "status": response["status"],
+          "statusText": response["statusText"],
+          "responseText": response["responseText"]
+        };
+        self.sendCommandResponse(res_code);
+      }, function(response) {
+        res_code = {
+          "status": response["status"],
+          "statusText": response["statusText"],
+          "responseText": response["responseText"]
+        };
+        self.sendCommandResponse(res_code);
+      });
+    };
 
-    PrinterCommClass.prototype.receiveFile = function(file) {};
+    PrinterCommClass.prototype.sendStatusUpdate = function(response) {
+      return this.dispatcher.trigger("status_update", {
+        secret: secret_key,
+        status: response
+      });
+    };
+
+    PrinterCommClass.prototype.sendCommandResponse = function(response) {
+      return this.dispatcher.trigger("command_response", {
+        secret: secret_key,
+        status: response
+      });
+    };
 
     return PrinterCommClass;
 
