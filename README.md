@@ -79,3 +79,23 @@ at `~/Library/Application Support/OctoPrint` on MacOS.
 A comprehensive overview of all available configuration settings can be found
 [on the wiki](https://github.com/foosel/OctoPrint/wiki/Configuration). Please note that the most commonly used
 configuration settings can also easily be edited from OctoPrint's settings dialog.
+
+Additional Configuration
+-------------
+
+If you are going to use the additional feature of applying a websocket interface for Octoprint, you will need to add a `config.js` file to `src/octoprint/static/js/config.js` and write the following:
+
+    // to control Octoprint
+    var api_key = "fewiojioefwioewji";
+    // name of the server host
+    var host_name = "localhost";
+    // port number of the host
+    var socket_port = ":3000";
+    // session_key to redirect websocket to server
+    var secret_key = "jwoeifwjoeif";
+
+    // how often you want the status to be pushed to the server
+    var intervalMillis = 7000;
+    var intervalLongMillis = 50000;
+
+each variables act just as written in the comment outs.
