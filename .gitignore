@@ -21,4 +21,5 @@ dist
 pypy
 OctoPrint.egg-info
 *.orig
+
 src/octoprint/static/js/config.js
