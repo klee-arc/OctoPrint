@@ -27,7 +27,6 @@ default_settings = {
 		"port": None,
 		"baudrate": None,
 		"autoconnect": False,
-		# "autoconnect": True,
 		"log": False,
 		"timeout": {
 			"detection": 0.5,
