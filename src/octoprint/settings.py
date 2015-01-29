@@ -27,6 +27,7 @@ default_settings = {
 		"port": None,
 		"baudrate": None,
 		"autoconnect": False,
+		# "autoconnect": True,
 		"log": False,
 		"timeout": {
 			"detection": 0.5,
@@ -113,7 +114,8 @@ default_settings = {
 		"actions": []
 	},
 	"accessControl": {
-		"enabled": True,
+		# "enabled": True,
+		"enabled": False,
 		"salt": None,
 		"userManager": "octoprint.users.FilebasedUserManager",
 		"userfile": None,
