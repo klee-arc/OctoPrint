@@ -677,23 +677,18 @@
 						var uri = host_name + socket_port + "/websocket";
 						window.printercomm = new PrinterCommClass(uri, true, secret_key);
 
-						/* made to continuously send status updates */
-						setInterval(
-							function () { 
-								printercomm.statusUpdate();
-							}, intervalMillis
-						);
-
-						/* made to daemonize websocket connection even if the server drops as long as the browser is available */
-						setInterval(
-							function() {
-								if (printercomm.dispatcher.state != "connected"){
-									window.printercomm = new PrinterCommClass(uri, true, secret_key);
-								}
-							}, intervalLongMillis
-						);
-
-					});
+            /* made to continuously send status updates */
+            setInterval(
+              function () { 
+                if (printercomm.dispatcher.state == "connected"){
+                  printercomm.statusUpdate();
+                } else {
+                  window.printercomm = new PrinterCommClass(uri, true, secret_key);
+                  console.log("Printer disconnected! Trying to reconnect...");
+                }
+              }, intervalMillis
+            );
+          });
 
           function randomString(len, charSet) {
             charSet = charSet || 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';

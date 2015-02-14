@@ -2,6 +2,7 @@ class @PrinterCommClass
   constructor: (url, useWebsocket, printer_session_key) ->
     @dispatcher = new WebSocketRails(url, useWebsocket)
     @channel = @dispatcher.subscribe("printer_session_" + printer_session_key)
+    @session_key = printer_session_key
     @bindEvents()
 
   bindEvents: () =>
@@ -16,7 +17,6 @@ class @PrinterCommClass
 
   receiveFile: (file) =>
     boundary_key = randomString(16)
-    console.log file
 
     filename = file["filename"]
     content = file["content"]
@@ -37,7 +37,7 @@ class @PrinterCommClass
       url: "/api/files/local"
       type: "POST"
       headers:
-        "X-ApiKey": secret_key
+        "X-ApiKey": @session_key
       processData: false
       contentType: header
       data: data
@@ -54,12 +54,14 @@ class @PrinterCommClass
         "files" : files[0]
       self.sendStatusUpdate res_code
       return
-    , (connection, job) ->
+    , (connection, job, files) ->
       res_code = 
         "connection" : connection[0]
         "job" : job[0]
         "files" : files[0]
       self.sendStatusUpdate res_code
+      console.log "statusUpdate failed!"
+      console.log res_code
       return
     )
 
@@ -69,7 +71,7 @@ class @PrinterCommClass
       type: "GET"
       dataType: "JSON"
       headers:
-        "X-ApiKey": secret_key
+        "X-ApiKey": @session_key
 
   userCommandReceive: (message) =>
     console.log message
@@ -81,7 +83,7 @@ class @PrinterCommClass
         type: message["type"]
         contentType: "application/json"
         headers:
-          "X-ApiKey": secret_key
+          "X-ApiKey": @session_key
         data: message["params"]
     ).then((response) ->
       res_code =
@@ -101,13 +103,12 @@ class @PrinterCommClass
 
   sendStatusUpdate: (response) =>
     @dispatcher.trigger "status_update",
-      secret: secret_key
+      secret: @session_key
       status: response
+    console.log "status update done!"
+    console.log response
 
   sendCommandResponse: (response) =>
     @dispatcher.trigger "command_response",
-      secret: secret_key
+      secret: @session_key
       status: response
-
-
-
