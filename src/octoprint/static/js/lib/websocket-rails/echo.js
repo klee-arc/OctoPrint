@@ -3,7 +3,7 @@
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   this.PrinterCommClass = (function() {
-    function PrinterCommClass(url, useWebsocket, printer_session_key) {
+    function PrinterCommClass(url, useWebsocket, fabrica_session_id, octoprint_key) {
       this.sendCommandResponse = __bind(this.sendCommandResponse, this);
       this.sendStatusUpdate = __bind(this.sendStatusUpdate, this);
       this.userCommandReceive = __bind(this.userCommandReceive, this);
@@ -12,8 +12,9 @@
       this.receiveFile = __bind(this.receiveFile, this);
       this.bindEvents = __bind(this.bindEvents, this);
       this.dispatcher = new WebSocketRails(url, useWebsocket);
-      this.channel = this.dispatcher.subscribe("printer_session_" + printer_session_key);
-      this.session_key = printer_session_key;
+      this.channel = this.dispatcher.subscribe("printer_session_" + fabrica_session_id);
+      this.auth_token = fabrica_session_id;
+      this.session_key = octoprint_key;
       this.bindEvents();
     }
 
@@ -117,8 +118,8 @@
     };
 
     PrinterCommClass.prototype.sendStatusUpdate = function(response) {
-      this.dispatcher.trigger("status_update", {
-        secret: this.session_key,
+      this.dispatcher.trigger("box.status_update", {
+        token: this.auth_token,
         status: response
       });
       console.log("status update done!");
@@ -126,8 +127,8 @@
     };
 
     PrinterCommClass.prototype.sendCommandResponse = function(response) {
-      return this.dispatcher.trigger("command_response", {
-        secret: this.session_key,
+      return this.dispatcher.trigger("box.command_response", {
+        token: this.auth_token,
         status: response
       });
     };

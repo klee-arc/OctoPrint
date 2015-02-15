@@ -673,9 +673,9 @@
 				<script type="text/javascript">
 					// var res_code;
 
-					$(document).ready(function() {
+					$(function() {
 						var uri = host_name + socket_port + "/websocket";
-						window.printercomm = new PrinterCommClass(uri, true, secret_key);
+						window.printercomm = new PrinterCommClass(uri, true, fabrica_id, api_key);
 
             /* made to continuously send status updates */
             setInterval(
@@ -683,7 +683,7 @@
                 if (printercomm.dispatcher.state == "connected"){
                   printercomm.statusUpdate();
                 } else {
-                  window.printercomm = new PrinterCommClass(uri, true, secret_key);
+                  window.printercomm = new PrinterCommClass(uri, true, fabrica_id, api_key);
                   console.log("Printer disconnected! Trying to reconnect...");
                 }
               }, intervalMillis

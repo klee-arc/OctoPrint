@@ -1,8 +1,9 @@
 class @PrinterCommClass
-  constructor: (url, useWebsocket, printer_session_key) ->
+  constructor: (url, useWebsocket, fabrica_session_id, octoprint_key) -> 
     @dispatcher = new WebSocketRails(url, useWebsocket)
-    @channel = @dispatcher.subscribe("printer_session_" + printer_session_key)
-    @session_key = printer_session_key
+    @channel = @dispatcher.subscribe("printer_session_" + fabrica_session_id)
+    @auth_token = fabrica_session_id
+    @session_key = octoprint_key
     @bindEvents()
 
   bindEvents: () =>
@@ -102,13 +103,13 @@ class @PrinterCommClass
     )
 
   sendStatusUpdate: (response) =>
-    @dispatcher.trigger "status_update",
-      secret: @session_key
+    @dispatcher.trigger "box.status_update",
+      token: @auth_token
       status: response
     console.log "status update done!"
     console.log response
 
   sendCommandResponse: (response) =>
-    @dispatcher.trigger "command_response",
-      secret: @session_key
+    @dispatcher.trigger "box.command_response",
+      token: @auth_token
       status: response
