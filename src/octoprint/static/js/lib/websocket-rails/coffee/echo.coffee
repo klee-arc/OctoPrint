@@ -1,9 +1,14 @@
 class @PrinterCommClass
-  constructor: (url, useWebsocket, fabrica_session_id, octoprint_key) -> 
-    @dispatcher = new WebSocketRails(url, useWebsocket)
-    @channel = @dispatcher.subscribe("printer_session_" + fabrica_session_id)
-    @auth_token = fabrica_session_id
+  constructor: (url, websocket_url, fabrica_id, octoprint_key) -> 
     @session_key = octoprint_key
+    @dispatcher = new WebSocketRails(url, websocket_url)
+    @auth_channel = @dispatcher.subscribe("request_token_" + fabrica_id)
+    @auth_channel.bind 'oauth_callback', @initBind
+    @sendOauthRequest(fabrica_id)
+
+  initBind: (key) =>
+    @auth_key = key
+    @channel = @dispatcher.subscribe("printer_session_" + @auth_key)
     @bindEvents()
 
   bindEvents: () =>
@@ -102,9 +107,14 @@ class @PrinterCommClass
       return
     )
 
+  sendOauthRequest: (fabrica_id) =>
+    @dispatcher.trigger "box.oauth_request",
+      session_id: fabrica_id
+    console.log "send oauth done!"
+
   sendStatusUpdate: (response) =>
     @dispatcher.trigger "box.status_update",
-      token: @auth_token
+      token: @auth_key
       status: response
     console.log "status update done!"
     console.log response

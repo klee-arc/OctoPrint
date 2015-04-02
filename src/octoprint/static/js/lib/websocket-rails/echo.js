@@ -3,20 +3,28 @@
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   this.PrinterCommClass = (function() {
-    function PrinterCommClass(url, useWebsocket, fabrica_session_id, octoprint_key) {
+    function PrinterCommClass(url, websocket_url, fabrica_id, octoprint_key) {
       this.sendCommandResponse = __bind(this.sendCommandResponse, this);
       this.sendStatusUpdate = __bind(this.sendStatusUpdate, this);
+      this.sendOauthRequest = __bind(this.sendOauthRequest, this);
       this.userCommandReceive = __bind(this.userCommandReceive, this);
       this.statusReceive = __bind(this.statusReceive, this);
       this.statusUpdate = __bind(this.statusUpdate, this);
       this.receiveFile = __bind(this.receiveFile, this);
       this.bindEvents = __bind(this.bindEvents, this);
-      this.dispatcher = new WebSocketRails(url, useWebsocket);
-      this.channel = this.dispatcher.subscribe("printer_session_" + fabrica_session_id);
-      this.auth_token = fabrica_session_id;
+      this.initBind = __bind(this.initBind, this);
       this.session_key = octoprint_key;
-      this.bindEvents();
+      this.dispatcher = new WebSocketRails(url, websocket_url);
+      this.auth_channel = this.dispatcher.subscribe("request_token_" + fabrica_id);
+      this.auth_channel.bind('oauth_callback', this.initBind);
+      this.sendOauthRequest(fabrica_id);
     }
+
+    PrinterCommClass.prototype.initBind = function(key) {
+      this.auth_key = key;
+      this.channel = this.dispatcher.subscribe("printer_session_" + this.auth_key);
+      return this.bindEvents();
+    };
 
     PrinterCommClass.prototype.bindEvents = function() {
       this.channel.bind('request_status', this.statusUpdate);
@@ -117,9 +125,16 @@
       });
     };
 
+    PrinterCommClass.prototype.sendOauthRequest = function(fabrica_id) {
+      this.dispatcher.trigger("box.oauth_request", {
+        session_id: fabrica_id
+      });
+      return console.log("send oauth done!");
+    };
+
     PrinterCommClass.prototype.sendStatusUpdate = function(response) {
       this.dispatcher.trigger("box.status_update", {
-        token: this.auth_token,
+        token: this.auth_key,
         status: response
       });
       console.log("status update done!");
