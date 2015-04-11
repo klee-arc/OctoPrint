@@ -7,10 +7,11 @@
       this.sendCommandResponse = __bind(this.sendCommandResponse, this);
       this.sendStatusUpdate = __bind(this.sendStatusUpdate, this);
       this.sendOauthRequest = __bind(this.sendOauthRequest, this);
-      this.userCommandReceive = __bind(this.userCommandReceive, this);
-      this.statusReceive = __bind(this.statusReceive, this);
+      this.userCommand = __bind(this.userCommand, this);
       this.statusUpdate = __bind(this.statusUpdate, this);
-      this.receiveFile = __bind(this.receiveFile, this);
+      this.statusReceive = __bind(this.statusReceive, this);
+      this.sendFile = __bind(this.sendFile, this);
+      this.refresh = __bind(this.refresh, this);
       this.bindEvents = __bind(this.bindEvents, this);
       this.initBind = __bind(this.initBind, this);
       this.session_key = octoprint_key;
@@ -27,26 +28,39 @@
     };
 
     PrinterCommClass.prototype.bindEvents = function() {
-      this.channel.bind('request_status', this.statusUpdate);
-      this.channel.bind('user_command_receive', this.userCommandReceive);
-      return this.channel.bind('user_file', this.receiveFile);
+      this.channel.bind('user_command', this.userCommand);
+      this.channel.bind('user_file', this.sendFile);
+      return this.channel.bind('machine_refresh', this.refresh);
     };
 
-    PrinterCommClass.prototype.receiveFile = function(file) {
+    PrinterCommClass.prototype.refresh = function() {
+      return location.reload();
+    };
+
+    PrinterCommClass.prototype.sendFile = function(message) {
       var boundary_key, content, data, filename, header;
+      console.log("dump file");
+      console.log(message);
       boundary_key = randomString(16);
-      filename = file["filename"];
-      content = file["content"];
+      filename = message["filename"];
+      content = message["content"];
       header = 'multipart/form-data; boundary=----WebKitFormBoundary' + boundary_key;
       data = '------WebKitFormBoundary' + boundary_key + ' \n';
       data += 'Content-Disposition: form-data; name="file"; filename="' + filename + '" \n';
       data += 'Content-Type: application/octet-stream \n';
       data += content + ' \n';
       data += '\n------WebKitFormBoundary' + boundary_key + ' \n';
-      data += 'Content-Disposition: form-data; name="select" \ntrue \n';
+      if (message["select"]) {
+        data += 'Content-Disposition: form-data; name="select"\n\ntrue';
+      } else {
+        data += 'Content-Disposition: form-data; name="select"\n\nfalse';
+      }
       data += '\n------WebKitFormBoundary' + boundary_key + ' \n';
-      data += 'Content-Disposition: form-data; name="print" \n';
-      data += 'true \n';
+      if (message["print"]) {
+        data += 'Content-Disposition: form-data; name="print"\n\ntrue';
+      } else {
+        data += 'Content-Disposition: form-data; name="print"\n\nfalse';
+      }
       data += '\n------WebKitFormBoundary' + boundary_key + '--';
       console.log(data);
       return $.ajax({
@@ -58,6 +72,18 @@
         processData: false,
         contentType: header,
         data: data
+      });
+    };
+
+    PrinterCommClass.prototype.statusReceive = function(url) {
+      return $.ajax({
+        url: url,
+        type: "GET",
+        dataType: "JSON",
+        contentType: "application/json",
+        headers: {
+          "X-ApiKey": this.session_key
+        }
       });
     };
 
@@ -84,18 +110,7 @@
       });
     };
 
-    PrinterCommClass.prototype.statusReceive = function(url) {
-      return $.ajax({
-        url: url,
-        type: "GET",
-        dataType: "JSON",
-        headers: {
-          "X-ApiKey": this.session_key
-        }
-      });
-    };
-
-    PrinterCommClass.prototype.userCommandReceive = function(message) {
+    PrinterCommClass.prototype.userCommand = function(message) {
       var res_code, self;
       console.log(message);
       res_code = void 0;
@@ -103,24 +118,17 @@
       return $.when($.ajax({
         url: message["url"],
         type: message["type"],
+        dataType: "JSON",
         contentType: "application/json",
         headers: {
           "X-ApiKey": this.session_key
         },
         data: message["params"]
       })).then(function(response) {
-        res_code = {
-          "status": response["status"],
-          "statusText": response["statusText"],
-          "responseText": response["responseText"]
-        };
+        res_code = response;
         self.sendCommandResponse(res_code);
       }, function(response) {
-        res_code = {
-          "status": response["status"],
-          "statusText": response["statusText"],
-          "responseText": response["responseText"]
-        };
+        res_code = response;
         self.sendCommandResponse(res_code);
       });
     };
@@ -143,8 +151,8 @@
 
     PrinterCommClass.prototype.sendCommandResponse = function(response) {
       return this.dispatcher.trigger("box.command_response", {
-        token: this.auth_token,
-        status: response
+        token: this.auth_key,
+        callback: response
       });
     };
 

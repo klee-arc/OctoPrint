@@ -12,20 +12,22 @@ class @PrinterCommClass
     @bindEvents()
 
   bindEvents: () =>
-    @channel.bind 'request_status', @statusUpdate
-    @channel.bind 'user_command_receive', @userCommandReceive
-    @channel.bind 'user_file', @receiveFile
+    # @channel.bind 'request_status', @statusUpdate
+    @channel.bind 'user_command', @userCommand
+    @channel.bind 'user_file', @sendFile
+    @channel.bind 'machine_refresh', @refresh
 
- #   @dispatcher.bind 'set_session_key', @initialEvent
- # initialEvent: (message) =>
- #   console.log "key set"
- #   window.session_key = message
+  refresh: () =>
+    location.reload()
 
-  receiveFile: (file) =>
+  sendFile: (message) =>
+    console.log("dump file")
+    console.log(message)
+
     boundary_key = randomString(16)
 
-    filename = file["filename"]
-    content = file["content"]
+    filename = message["filename"]
+    content = message["content"]
     header = 'multipart/form-data; boundary=----WebKitFormBoundary' + boundary_key
 
     data = '------WebKitFormBoundary'+boundary_key+' \n'
@@ -33,12 +35,19 @@ class @PrinterCommClass
     data += 'Content-Type: application/octet-stream \n'
     data += content+' \n'
     data += '\n------WebKitFormBoundary'+boundary_key+' \n'
-    data += 'Content-Disposition: form-data; name="select" \ntrue \n'
+    if message["select"]
+      data += 'Content-Disposition: form-data; name="select"\n\ntrue'
+    else
+      data += 'Content-Disposition: form-data; name="select"\n\nfalse'
     data += '\n------WebKitFormBoundary'+boundary_key+' \n'
-    data += 'Content-Disposition: form-data; name="print" \n'
-    data += 'true \n'
+    if message["print"]
+      data += 'Content-Disposition: form-data; name="print"\n\ntrue'
+    else
+      data += 'Content-Disposition: form-data; name="print"\n\nfalse'
     data += '\n------WebKitFormBoundary'+boundary_key+'--';
+
     console.log data
+
     $.ajax
       url: "/api/files/local"
       type: "POST"
@@ -48,6 +57,17 @@ class @PrinterCommClass
       contentType: header
       data: data
       # contentType: header
+
+
+  # an abstract method to retrieve the status of the printer
+  statusReceive: (url) =>
+    $.ajax
+      url: url
+      type: "GET"
+      dataType: "JSON"
+      contentType: "application/json"
+      headers:
+        "X-ApiKey": @session_key
 
   statusUpdate: (message) =>
     res_code = undefined
@@ -71,15 +91,7 @@ class @PrinterCommClass
       return
     )
 
-  statusReceive: (url) =>
-    $.ajax
-      url: url
-      type: "GET"
-      dataType: "JSON"
-      headers:
-        "X-ApiKey": @session_key
-
-  userCommandReceive: (message) =>
+  userCommand: (message) =>
     console.log message
     res_code = undefined
     self = @
@@ -87,25 +99,35 @@ class @PrinterCommClass
       $.ajax
         url: message["url"]
         type: message["type"]
+        dataType: "JSON"
         contentType: "application/json"
         headers:
           "X-ApiKey": @session_key
         data: message["params"]
     ).then((response) ->
-      res_code =
-        "status" : response["status"]
-        "statusText" : response["statusText"]
-        "responseText" : response["responseText"]
+      res_code = response
       self.sendCommandResponse res_code
       return
     ,(response) ->
-      res_code =
-        "status" : response["status"]
-        "statusText" : response["statusText"]
-        "responseText" : response["responseText"]
+      res_code = response
       self.sendCommandResponse res_code
       return
     )
+      #   ).then((response) ->
+      #     res_code =
+      #       "status" : response["status"]
+      #       "statusText" : response["statusText"]
+      #       "responseText" : response["responseText"]
+      #     self.sendCommandResponse res_code
+      #     return
+      #   ,(response) ->
+      #     res_code =
+      #       "status" : response["status"]
+      #       "statusText" : response["statusText"]
+      #       "responseText" : response["responseText"]
+      #     self.sendCommandResponse res_code
+      #     return
+      #   )
 
   sendOauthRequest: (fabrica_id) =>
     @dispatcher.trigger "box.oauth_request",
@@ -121,5 +143,5 @@ class @PrinterCommClass
 
   sendCommandResponse: (response) =>
     @dispatcher.trigger "box.command_response",
-      token: @auth_token
-      status: response
+      token: @auth_key
+      callback: response
