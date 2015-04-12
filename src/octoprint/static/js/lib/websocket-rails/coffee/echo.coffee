@@ -35,7 +35,7 @@ class @PrinterCommClass
   sendOauthRequest: (fabrica_id) =>
     @dispatcher.trigger "box.oauth_request",
       session_id: fabrica_id
-    console.log "send oauth done!"
+    # console.log "send oauth done!"
 
 # Status update
 
@@ -64,14 +64,18 @@ class @PrinterCommClass
     @dispatcher.trigger "box.status_update",
       token: @auth_key
       status: response
-    console.log "status update done!"
-    console.log response
+    # console.log "status update done!"
+    # console.log response
 
 
 # User command and response
 
+  sendCommandResponse: (response) =>
+    @dispatcher.trigger "box.command_response",
+      token: @auth_key
+      callback: response
+
   userCommand: (message) =>
-    console.log message
     res_code = undefined
     self = @
     $.when(@execAjax(message["url"], message["type"], message["params"])).then((response) ->
@@ -84,18 +88,10 @@ class @PrinterCommClass
       return
     )
 
-  sendCommandResponse: (response) =>
-    @dispatcher.trigger "box.command_response",
-      token: @auth_key
-      callback: response
-
 
 # File transfer
 
   sendFile: (message) =>
-    console.log("dump file")
-    console.log(message)
-
     boundary_key = randomString(16)
 
     filename = message["filename"]
@@ -118,8 +114,8 @@ class @PrinterCommClass
       data += 'Content-Disposition: form-data; name="print"\n\nfalse'
     data += '\n------WebKitFormBoundary'+boundary_key+'--';
 
-    console.log data
-
+    res_code = undefined
+    self = @
     $.when(@execAjax("/api/files/local", "POST", data, content_type)).then((response) ->
       res_code = response
       self.sendCommandResponse res_code

@@ -6,8 +6,8 @@
     function PrinterCommClass(url, websocket_url, fabrica_id, octoprint_key) {
       this.execRefresh = __bind(this.execRefresh, this);
       this.sendFile = __bind(this.sendFile, this);
-      this.sendCommandResponse = __bind(this.sendCommandResponse, this);
       this.userCommand = __bind(this.userCommand, this);
+      this.sendCommandResponse = __bind(this.sendCommandResponse, this);
       this.sendStatusUpdate = __bind(this.sendStatusUpdate, this);
       this.statusUpdate = __bind(this.statusUpdate, this);
       this.sendOauthRequest = __bind(this.sendOauthRequest, this);
@@ -53,10 +53,9 @@
     };
 
     PrinterCommClass.prototype.sendOauthRequest = function(fabrica_id) {
-      this.dispatcher.trigger("box.oauth_request", {
+      return this.dispatcher.trigger("box.oauth_request", {
         session_id: fabrica_id
       });
-      return console.log("send oauth done!");
     };
 
     PrinterCommClass.prototype.statusUpdate = function(message) {
@@ -83,17 +82,21 @@
     };
 
     PrinterCommClass.prototype.sendStatusUpdate = function(response) {
-      this.dispatcher.trigger("box.status_update", {
+      return this.dispatcher.trigger("box.status_update", {
         token: this.auth_key,
         status: response
       });
-      console.log("status update done!");
-      return console.log(response);
+    };
+
+    PrinterCommClass.prototype.sendCommandResponse = function(response) {
+      return this.dispatcher.trigger("box.command_response", {
+        token: this.auth_key,
+        callback: response
+      });
     };
 
     PrinterCommClass.prototype.userCommand = function(message) {
       var res_code, self;
-      console.log(message);
       res_code = void 0;
       self = this;
       return $.when(this.execAjax(message["url"], message["type"], message["params"])).then(function(response) {
@@ -105,17 +108,8 @@
       });
     };
 
-    PrinterCommClass.prototype.sendCommandResponse = function(response) {
-      return this.dispatcher.trigger("box.command_response", {
-        token: this.auth_key,
-        callback: response
-      });
-    };
-
     PrinterCommClass.prototype.sendFile = function(message) {
-      var boundary_key, content, content_type, data, filename;
-      console.log("dump file");
-      console.log(message);
+      var boundary_key, content, content_type, data, filename, res_code, self;
       boundary_key = randomString(16);
       filename = message["filename"];
       content = message["content"];
@@ -137,13 +131,12 @@
         data += 'Content-Disposition: form-data; name="print"\n\nfalse';
       }
       data += '\n------WebKitFormBoundary' + boundary_key + '--';
-      console.log(data);
+      res_code = void 0;
+      self = this;
       return $.when(this.execAjax("/api/files/local", "POST", data, content_type)).then(function(response) {
-        var res_code;
         res_code = response;
         self.sendCommandResponse(res_code);
       }, function(response) {
-        var res_code;
         res_code = response;
         self.sendCommandResponse(res_code);
       });
