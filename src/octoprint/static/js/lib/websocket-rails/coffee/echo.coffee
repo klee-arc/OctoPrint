@@ -15,10 +15,82 @@ class @PrinterCommClass
     # @channel.bind 'request_status', @statusUpdate
     @channel.bind 'user_command', @userCommand
     @channel.bind 'user_file', @sendFile
-    @channel.bind 'machine_refresh', @refresh
+    @channel.bind 'machine_refresh', @execRefresh
 
-  refresh: () =>
-    location.reload()
+
+# Abstract Ajax
+
+  execAjax: (url, type, data=null, content_type="application/json") =>
+    $.ajax
+      url: url
+      type: type
+      dataType: "JSON"
+      contentType: content_type
+      headers:
+        "X-ApiKey": @session_key
+      data: data
+
+# Oauth
+
+  sendOauthRequest: (fabrica_id) =>
+    @dispatcher.trigger "box.oauth_request",
+      session_id: fabrica_id
+    console.log "send oauth done!"
+
+# Status update
+
+  statusUpdate: (message) =>
+    res_code = undefined
+    self = @
+    $.when(@execAjax("/api/connection","GET"), @execAjax("/api/job","GET"), @execAjax("/api/files","GET")).then((connection, job, files) ->
+      res_code = 
+        "connection" : connection[0]
+        "job" : job[0]
+        "files" : files[0]
+      self.sendStatusUpdate res_code
+      return
+    , (connection, job, files) ->
+      res_code = 
+        "connection" : connection[0]
+        "job" : job[0]
+        "files" : files[0]
+      self.sendStatusUpdate res_code
+      console.log "statusUpdate failed!"
+      console.log res_code
+      return
+    )
+
+  sendStatusUpdate: (response) =>
+    @dispatcher.trigger "box.status_update",
+      token: @auth_key
+      status: response
+    console.log "status update done!"
+    console.log response
+
+
+# User command and response
+
+  userCommand: (message) =>
+    console.log message
+    res_code = undefined
+    self = @
+    $.when(@execAjax(message["url"], message["type"], message["params"])).then((response) ->
+      res_code = response
+      self.sendCommandResponse res_code
+      return
+    ,(response) ->
+      res_code = response
+      self.sendCommandResponse res_code
+      return
+    )
+
+  sendCommandResponse: (response) =>
+    @dispatcher.trigger "box.command_response",
+      token: @auth_key
+      callback: response
+
+
+# File transfer
 
   sendFile: (message) =>
     console.log("dump file")
@@ -28,7 +100,7 @@ class @PrinterCommClass
 
     filename = message["filename"]
     content = message["content"]
-    header = 'multipart/form-data; boundary=----WebKitFormBoundary' + boundary_key
+    content_type = 'multipart/form-data; boundary=----WebKitFormBoundary' + boundary_key
 
     data = '------WebKitFormBoundary'+boundary_key+' \n'
     data += 'Content-Disposition: form-data; name="file"; filename="'+filename+'" \n'
@@ -48,63 +120,7 @@ class @PrinterCommClass
 
     console.log data
 
-    $.ajax
-      url: "/api/files/local"
-      type: "POST"
-      headers:
-        "X-ApiKey": @session_key
-      processData: false
-      contentType: header
-      data: data
-      # contentType: header
-
-
-  # an abstract method to retrieve the status of the printer
-  statusReceive: (url) =>
-    $.ajax
-      url: url
-      type: "GET"
-      dataType: "JSON"
-      contentType: "application/json"
-      headers:
-        "X-ApiKey": @session_key
-
-  statusUpdate: (message) =>
-    res_code = undefined
-
-    self = @
-    $.when(@statusReceive("/api/connection"), @statusReceive("/api/job"), @statusReceive("/api/files")).then((connection, job, files) ->
-      res_code = 
-        "connection" : connection[0]
-        "job" : job[0]
-        "files" : files[0]
-      self.sendStatusUpdate res_code
-      return
-    , (connection, job, files) ->
-      res_code = 
-        "connection" : connection[0]
-        "job" : job[0]
-        "files" : files[0]
-      self.sendStatusUpdate res_code
-      console.log "statusUpdate failed!"
-      console.log res_code
-      return
-    )
-
-  userCommand: (message) =>
-    console.log message
-    res_code = undefined
-    self = @
-    $.when(
-      $.ajax
-        url: message["url"]
-        type: message["type"]
-        dataType: "JSON"
-        contentType: "application/json"
-        headers:
-          "X-ApiKey": @session_key
-        data: message["params"]
-    ).then((response) ->
+    $.when(@execAjax("/api/files/local", "POST", data, content_type)).then((response) ->
       res_code = response
       self.sendCommandResponse res_code
       return
@@ -113,35 +129,9 @@ class @PrinterCommClass
       self.sendCommandResponse res_code
       return
     )
-      #   ).then((response) ->
-      #     res_code =
-      #       "status" : response["status"]
-      #       "statusText" : response["statusText"]
-      #       "responseText" : response["responseText"]
-      #     self.sendCommandResponse res_code
-      #     return
-      #   ,(response) ->
-      #     res_code =
-      #       "status" : response["status"]
-      #       "statusText" : response["statusText"]
-      #       "responseText" : response["responseText"]
-      #     self.sendCommandResponse res_code
-      #     return
-      #   )
 
-  sendOauthRequest: (fabrica_id) =>
-    @dispatcher.trigger "box.oauth_request",
-      session_id: fabrica_id
-    console.log "send oauth done!"
 
-  sendStatusUpdate: (response) =>
-    @dispatcher.trigger "box.status_update",
-      token: @auth_key
-      status: response
-    console.log "status update done!"
-    console.log response
+# Utilities
 
-  sendCommandResponse: (response) =>
-    @dispatcher.trigger "box.command_response",
-      token: @auth_key
-      callback: response
+  execRefresh: () =>
+    location.reload()

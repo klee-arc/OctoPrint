@@ -4,14 +4,14 @@
 
   this.PrinterCommClass = (function() {
     function PrinterCommClass(url, websocket_url, fabrica_id, octoprint_key) {
-      this.sendCommandResponse = __bind(this.sendCommandResponse, this);
-      this.sendStatusUpdate = __bind(this.sendStatusUpdate, this);
-      this.sendOauthRequest = __bind(this.sendOauthRequest, this);
-      this.userCommand = __bind(this.userCommand, this);
-      this.statusUpdate = __bind(this.statusUpdate, this);
-      this.statusReceive = __bind(this.statusReceive, this);
+      this.execRefresh = __bind(this.execRefresh, this);
       this.sendFile = __bind(this.sendFile, this);
-      this.refresh = __bind(this.refresh, this);
+      this.sendCommandResponse = __bind(this.sendCommandResponse, this);
+      this.userCommand = __bind(this.userCommand, this);
+      this.sendStatusUpdate = __bind(this.sendStatusUpdate, this);
+      this.statusUpdate = __bind(this.statusUpdate, this);
+      this.sendOauthRequest = __bind(this.sendOauthRequest, this);
+      this.execAjax = __bind(this.execAjax, this);
       this.bindEvents = __bind(this.bindEvents, this);
       this.initBind = __bind(this.initBind, this);
       this.session_key = octoprint_key;
@@ -30,68 +30,40 @@
     PrinterCommClass.prototype.bindEvents = function() {
       this.channel.bind('user_command', this.userCommand);
       this.channel.bind('user_file', this.sendFile);
-      return this.channel.bind('machine_refresh', this.refresh);
+      return this.channel.bind('machine_refresh', this.execRefresh);
     };
 
-    PrinterCommClass.prototype.refresh = function() {
-      return location.reload();
-    };
-
-    PrinterCommClass.prototype.sendFile = function(message) {
-      var boundary_key, content, data, filename, header;
-      console.log("dump file");
-      console.log(message);
-      boundary_key = randomString(16);
-      filename = message["filename"];
-      content = message["content"];
-      header = 'multipart/form-data; boundary=----WebKitFormBoundary' + boundary_key;
-      data = '------WebKitFormBoundary' + boundary_key + ' \n';
-      data += 'Content-Disposition: form-data; name="file"; filename="' + filename + '" \n';
-      data += 'Content-Type: application/octet-stream \n';
-      data += content + ' \n';
-      data += '\n------WebKitFormBoundary' + boundary_key + ' \n';
-      if (message["select"]) {
-        data += 'Content-Disposition: form-data; name="select"\n\ntrue';
-      } else {
-        data += 'Content-Disposition: form-data; name="select"\n\nfalse';
+    PrinterCommClass.prototype.execAjax = function(url, type, data, content_type) {
+      if (data == null) {
+        data = null;
       }
-      data += '\n------WebKitFormBoundary' + boundary_key + ' \n';
-      if (message["print"]) {
-        data += 'Content-Disposition: form-data; name="print"\n\ntrue';
-      } else {
-        data += 'Content-Disposition: form-data; name="print"\n\nfalse';
+      if (content_type == null) {
+        content_type = "application/json";
       }
-      data += '\n------WebKitFormBoundary' + boundary_key + '--';
-      console.log(data);
       return $.ajax({
-        url: "/api/files/local",
-        type: "POST",
+        url: url,
+        type: type,
+        dataType: "JSON",
+        contentType: content_type,
         headers: {
           "X-ApiKey": this.session_key
         },
-        processData: false,
-        contentType: header,
         data: data
       });
     };
 
-    PrinterCommClass.prototype.statusReceive = function(url) {
-      return $.ajax({
-        url: url,
-        type: "GET",
-        dataType: "JSON",
-        contentType: "application/json",
-        headers: {
-          "X-ApiKey": this.session_key
-        }
+    PrinterCommClass.prototype.sendOauthRequest = function(fabrica_id) {
+      this.dispatcher.trigger("box.oauth_request", {
+        session_id: fabrica_id
       });
+      return console.log("send oauth done!");
     };
 
     PrinterCommClass.prototype.statusUpdate = function(message) {
       var res_code, self;
       res_code = void 0;
       self = this;
-      return $.when(this.statusReceive("/api/connection"), this.statusReceive("/api/job"), this.statusReceive("/api/files")).then(function(connection, job, files) {
+      return $.when(this.execAjax("/api/connection", "GET"), this.execAjax("/api/job", "GET"), this.execAjax("/api/files", "GET")).then(function(connection, job, files) {
         res_code = {
           "connection": connection[0],
           "job": job[0],
@@ -110,36 +82,6 @@
       });
     };
 
-    PrinterCommClass.prototype.userCommand = function(message) {
-      var res_code, self;
-      console.log(message);
-      res_code = void 0;
-      self = this;
-      return $.when($.ajax({
-        url: message["url"],
-        type: message["type"],
-        dataType: "JSON",
-        contentType: "application/json",
-        headers: {
-          "X-ApiKey": this.session_key
-        },
-        data: message["params"]
-      })).then(function(response) {
-        res_code = response;
-        self.sendCommandResponse(res_code);
-      }, function(response) {
-        res_code = response;
-        self.sendCommandResponse(res_code);
-      });
-    };
-
-    PrinterCommClass.prototype.sendOauthRequest = function(fabrica_id) {
-      this.dispatcher.trigger("box.oauth_request", {
-        session_id: fabrica_id
-      });
-      return console.log("send oauth done!");
-    };
-
     PrinterCommClass.prototype.sendStatusUpdate = function(response) {
       this.dispatcher.trigger("box.status_update", {
         token: this.auth_key,
@@ -149,11 +91,66 @@
       return console.log(response);
     };
 
+    PrinterCommClass.prototype.userCommand = function(message) {
+      var res_code, self;
+      console.log(message);
+      res_code = void 0;
+      self = this;
+      return $.when(this.execAjax(message["url"], message["type"], message["params"])).then(function(response) {
+        res_code = response;
+        self.sendCommandResponse(res_code);
+      }, function(response) {
+        res_code = response;
+        self.sendCommandResponse(res_code);
+      });
+    };
+
     PrinterCommClass.prototype.sendCommandResponse = function(response) {
       return this.dispatcher.trigger("box.command_response", {
         token: this.auth_key,
         callback: response
       });
+    };
+
+    PrinterCommClass.prototype.sendFile = function(message) {
+      var boundary_key, content, content_type, data, filename;
+      console.log("dump file");
+      console.log(message);
+      boundary_key = randomString(16);
+      filename = message["filename"];
+      content = message["content"];
+      content_type = 'multipart/form-data; boundary=----WebKitFormBoundary' + boundary_key;
+      data = '------WebKitFormBoundary' + boundary_key + ' \n';
+      data += 'Content-Disposition: form-data; name="file"; filename="' + filename + '" \n';
+      data += 'Content-Type: application/octet-stream \n';
+      data += content + ' \n';
+      data += '\n------WebKitFormBoundary' + boundary_key + ' \n';
+      if (message["select"]) {
+        data += 'Content-Disposition: form-data; name="select"\n\ntrue';
+      } else {
+        data += 'Content-Disposition: form-data; name="select"\n\nfalse';
+      }
+      data += '\n------WebKitFormBoundary' + boundary_key + ' \n';
+      if (message["print"]) {
+        data += 'Content-Disposition: form-data; name="print"\n\ntrue';
+      } else {
+        data += 'Content-Disposition: form-data; name="print"\n\nfalse';
+      }
+      data += '\n------WebKitFormBoundary' + boundary_key + '--';
+      console.log(data);
+      return $.when(this.execAjax("/api/files/local", "POST", data, content_type)).then(function(response) {
+        var res_code;
+        res_code = response;
+        self.sendCommandResponse(res_code);
+      }, function(response) {
+        var res_code;
+        res_code = response;
+        self.sendCommandResponse(res_code);
+      });
+    };
+
+    PrinterCommClass.prototype.execRefresh = function() {
+      return location.reload();
     };
 
     return PrinterCommClass;
