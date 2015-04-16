@@ -35,7 +35,7 @@ class @PrinterCommClass
   sendOauthRequest: (fabrica_id) =>
     @dispatcher.trigger "box.oauth_request",
       session_id: fabrica_id
-    # console.log "send oauth done!"
+    console.log "send oauth done!"
 
 # Status update
 

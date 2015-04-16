@@ -53,9 +53,10 @@
     };
 
     PrinterCommClass.prototype.sendOauthRequest = function(fabrica_id) {
-      return this.dispatcher.trigger("box.oauth_request", {
+      this.dispatcher.trigger("box.oauth_request", {
         session_id: fabrica_id
       });
+      return console.log("send oauth done!");
     };
 
     PrinterCommClass.prototype.statusUpdate = function(message) {
