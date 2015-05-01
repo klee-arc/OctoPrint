@@ -92,6 +92,7 @@ class @PrinterCommClass
 # File transfer
 
   sendFile: (message) =>
+    console.log message
     boundary_key = randomString(16)
 
     filename = message["filename"]

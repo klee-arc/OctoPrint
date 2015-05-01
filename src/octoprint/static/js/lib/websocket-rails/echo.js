@@ -111,6 +111,7 @@
 
     PrinterCommClass.prototype.sendFile = function(message) {
       var boundary_key, content, content_type, data, filename, res_code, self;
+      console.log(message);
       boundary_key = randomString(16);
       filename = message["filename"];
       content = message["content"];
