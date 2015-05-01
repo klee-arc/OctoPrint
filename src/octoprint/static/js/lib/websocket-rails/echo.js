@@ -110,32 +110,11 @@
     };
 
     PrinterCommClass.prototype.sendFile = function(message) {
-      var boundary_key, content, content_type, data, filename, res_code, self;
+      var res_code, self;
       console.log(message);
-      boundary_key = randomString(16);
-      filename = message["filename"];
-      content = message["content"];
-      content_type = 'multipart/form-data; boundary=----WebKitFormBoundary' + boundary_key;
-      data = '------WebKitFormBoundary' + boundary_key + ' \n';
-      data += 'Content-Disposition: form-data; name="file"; filename="' + filename + '" \n';
-      data += 'Content-Type: application/octet-stream \n';
-      data += content + ' \n';
-      data += '\n------WebKitFormBoundary' + boundary_key + ' \n';
-      if (message["select"]) {
-        data += 'Content-Disposition: form-data; name="select"\n\ntrue';
-      } else {
-        data += 'Content-Disposition: form-data; name="select"\n\nfalse';
-      }
-      data += '\n------WebKitFormBoundary' + boundary_key + ' \n';
-      if (message["print"]) {
-        data += 'Content-Disposition: form-data; name="print"\n\ntrue';
-      } else {
-        data += 'Content-Disposition: form-data; name="print"\n\nfalse';
-      }
-      data += '\n------WebKitFormBoundary' + boundary_key + '--';
       res_code = void 0;
       self = this;
-      return $.when(this.execAjax("/api/files/local", "POST", data, content_type)).then(function(response) {
+      return $.when(this.execAjax("/api/files/local", "POST", message["content"], message["content_type"])).then(function(response) {
         res_code = response;
         self.sendCommandResponse(res_code);
       }, function(response) {
